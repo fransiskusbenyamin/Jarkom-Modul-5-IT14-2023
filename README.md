@@ -86,7 +86,7 @@ Selanjutnya menyesuaikan pembagian IP sesuai dengan subnet yang telah dibagi ber
 
 ## Topologi Pada GNS
 
-![Topologi](/assets/gns.png)
+![Topologi](/topologi.png)
 
 ## Konfigurasi Router + IP
 
