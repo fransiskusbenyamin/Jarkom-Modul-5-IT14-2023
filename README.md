@@ -24,7 +24,7 @@ Keterangan Soal:
 
 Menentukan jumlah alamat IP yang dibutuhkan oleh tiap subnet dan melabel netmask berdasarkan jumlah IP yang dibutuhkan.
 
-| **Subnet ** | **Jumlah IP** | **Netmask** |
+| **Subnet**  | **Jumlah IP** | **Netmask** |
 | :---------: | :-----------: | :---------: |
 |     A1      |       2       |     /30     |
 |     A2      |     1023      |     /21     |
