@@ -317,4 +317,4 @@ route add -net 192.240.0.0 netmask 255.255.248.0 gw 192.240.14.130
 route add -net 192.240.8.0 netmask 255.255.252.0 gw 192.240.14.130
 ```
 
-> Yang lainya tidak perlu karena sudah terhubung dengan router yang lain. Contoh : Sein sudah terhubung dengan Heiter, sehingga tidak perlu di routing lagi. Begitu juga dengan GrabForest dan TurkRegion.
+> Yang lainnya tidak perlu karena sudah terhubung dengan router yang lain. Contoh : Sein sudah terhubung dengan Heiter, sehingga tidak perlu di routing lagi. Begitu juga dengan GrabForest dan TurkRegion.
