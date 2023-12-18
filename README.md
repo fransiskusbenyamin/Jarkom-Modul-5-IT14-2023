@@ -13,7 +13,7 @@
 Keterangan Soal:
 
 - Richter adalah DNS Server
-- Revolte adalah DHCP Server
+- Revolte adalah DHCP Server  
 - Sein dan Stark adalah Web Server
 - Jumlah Host pada SchwerMountain adalah 64
 - Jumlah Host pada LaubHills adalah 255
