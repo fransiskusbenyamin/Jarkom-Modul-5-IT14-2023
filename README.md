@@ -318,3 +318,139 @@ route add -net 192.240.8.0 netmask 255.255.252.0 gw 192.240.14.130
 ```
 
 > Yang lainnya tidak perlu karena sudah terhubung dengan router yang lain. Contoh : Sein sudah terhubung dengan Heiter, sehingga tidak perlu di routing lagi. Begitu juga dengan GrabForest dan TurkRegion.
+
+
+# Soal
+
+1. Agar topologi yang kalian buat dapat mengakses keluar, kalian diminta untuk mengkonfigurasi Aura menggunakan iptables, tetapi tidak ingin menggunakan MASQUERADE.
+
+  - Aura
+```bash
+ETH0_IP=$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+
+iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source $ETH0_IP
+```
+
+Karena kita menggunakan IP DHCP sebagai sebagai jalur keluar ke internet, maka kita harus mengambil IP dari eth0 aura sebagai jalur keluar. `ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}'` akan mereturn IP dari eth0 Aura
+
+Selanjutnya, untuk menyambungkan ke nat, maka kita masukkan ke NAT Table dengan POSTROUTING chain : `iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source $ETH0_IP`
+
+
+2. Kalian diminta untuk melakukan drop semua TCP dan UDP kecuali port 8080 pada TCP.
+
+  - GrobeForest, Stark, and Sein
+```bash
+echo 'nameserver 192.168.122.1' > /etc/resolv.conf
+
+apt-get update
+apt-get install netcat -y
+
+# Menolak semua koneksi TCP kecuali port 8080
+iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+iptables -A INPUT -p tcp -j DROP
+
+# Menolak semua koneksi UDP
+iptables -A INPUT -p udp -j DROP
+```
+
+
+
+3. Kepala Suku North Area meminta kalian untuk membatasi DHCP dan DNS Server hanya dapat dilakukan ping oleh maksimal 3 device secara bersamaan, selebihnya akan di drop.
+
+  - Revolte & Richter (DHCP server & DNS Server)
+```bash
+# Allow established and related connections
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Limit ICMP connections to 3 per second
+iptables -A INPUT -p icmp -m connlimit --connlimit-above 3 --connlimit-mask 0 -j DROP
+```
+
+- `--connlimit-above 3` adalah parameter menentukan batas koneksi yang terhubung
+- `--connlimit-mask 0` adalah parameter menentukan mask
+
+
+4. Lakukan pembatasan sehingga koneksi SSH pada Web Server hanya dapat dilakukan oleh masyarakat yang berada pada GrobeForest.
+
+  - Sein & Stark (Web Server)
+```bash
+iptables -A INPUT -p tcp --dport 22 -s 192.240.4.0/22 -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -j DROP
+```
+
+
+5. Selain itu, akses menuju WebServer hanya diperbolehkan saat jam kerja yaitu Senin-Jumat pada pukul 08.00-16.00.
+  - Sein & Stark (Web Server)
+```bash
+# Izinkan akses ke Web Server pada senin-jumat pukul 08:00-16:00
+iptables -A INPUT -p tcp --dport 80 -m time --timestart 08:00 --timestop 16:00 --weekdays Mon,Tue,Wed,Thu,Fri -j ACCEPT
+```
+
+6. Lalu, karena ternyata terdapat beberapa waktu di mana network administrator dari WebServer tidak bisa stand by, sehingga perlu ditambahkan rule bahwa akses pada hari Senin - Kamis pada jam 12.00 - 13.00 dilarang (istirahat maksi cuy) dan akses di hari Jumat pada jam 11.00 - 13.00 juga dilarang (maklum, Jumatan rek).
+
+  - Konfigurasi Sein & Stark (Web Server)
+```bash
+# Larangan Akses pada hari Senin-Kamis jam 12:00 - 13:00
+iptables -A INPUT -p tcp --dport 80 -m time --timestart 12:00 --timestop 13:00 --weekdays Mon,Tue,Wed,Thu -j DROP
+
+# Larangan akses pada hari jumat pada 11:00 - 13:00
+iptables -A INPUT -p tcp --dport 80 -m time --timestart 11:00 --timestop 13:00 --weekdays Fri -j DROP
+```
+
+
+7. Karena terdapat 2 WebServer, kalian diminta agar setiap client yang mengakses Sein dengan Port 80 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan dan request dari client yang mengakses Stark dengan port 443 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan.
+  - Sein
+```bash
+# Soal 7
+iptables -A PREROUTING -t nat -p tcp -d 192.240.4.2 --dport 80 -m statistics --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.240.4.2:80
+
+iptables -A PREROUTING -t nat -p tcp -d 192.240.4.2 --dport 80 -j DNAT --to-destination 192.240.0.14:80
+```
+
+  - Stark
+```bash
+# Soal 7
+iptables -A PREROUTING -t nat -p tcp -d 192.240.0.4 --dport 443 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.240.4.2:443
+
+iptables -A PREROUTING -t nat tcp -d 192.240.0.4 --dport 443 -j DNAT --to-destination 192.240.0.14:443
+```
+
+8. Karena berbeda koalisi politik, maka subnet dengan masyarakat yang berada pada Revolte dilarang keras mengakses WebServer hingga masa pencoblosan pemilu kepala suku 2024 berakhir. Masa pemilu (hingga pemungutan dan penghitungan suara selesai) kepala suku bersamaan dengan masa pemilu Presiden dan Wakil Presiden Indonesia 2024.
+
+  - Sein
+```bash
+### apabila ingin meng-drop TCP 
+iptables -A INPUT -p tcp -s 192.240.0.2 --dport 80 -m time --datestart 2023-10-19T00:00 --datestop 2024-02-15T00:00 -j DROP
+
+### namun ingin drop semua, bisa digunakan :
+iptables -A INPUT -s 192.240.0.2 -m time --datestart 2023-10-19T00:00 --datestop 2024-02-15T00:00 -j DROP
+
+```
+
+9. Sadar akan adanya potensial saling serang antar kubu politik, maka WebServer harus dapat secara otomatis memblokir  alamat IP yang melakukan scanning port dalam jumlah banyak (maksimal 20 scan port) di dalam selang waktu 10 menit. (clue: test dengan nmap)
+
+  - Sein
+```bash
+# Soal No 9
+iptables -A INPUT -p tcp --syn -m recent --name portscan --set
+iptables -A INPUT -p tcp --syn -m recent --name portscan --rcheck --seconds 600 --hitcount  20  -j  DROP
+```
+
+  - Stark
+```bash
+# Soal No 9
+iptables -N PORTSCAN
+iptables -A PORTSCAN -m recent --set --name portscan
+iptables -A PORTSCAN -m recent --update --seconds 600 --hitcount 20 --name portscan -j LOG --log-prefix "Portscan Detected: " --log-level 4
+iptables -A PORTSCAN -m recent --update --seconds 600 --hitcount 20 --name portscan -j DROP
+iptables -A INPUT -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 2/s -j ACCEPT
+iptables -A INPUT -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j PORTSCAN
+```
+
+10. Karena kepala suku ingin tau paket apa saja yang di-drop, maka di setiap node server dan router ditambahkan logging paket yang di-drop dengan standard syslog level.
+
+logging dapat ditambahkan dengan syntax iptables berikut yang dijalankan di semua node server dan router
+
+```bash
+iptables -A INPUT -j LOG --log-level debug --log-prefix "Dropped Packet: " -m limit --limit 1/second --limit-burst 10
+```
